@@ -6,6 +6,8 @@
 #include "common.h"
 #include "timer.h"
 
+
+
 void nw_cpu(unsigned char* sequence1, unsigned char* sequence2, int* scores, unsigned int numSequences) {
     for(unsigned int s = 0; s < numSequences; ++s) {
         int matrix[SEQUENCE_LENGTH][SEQUENCE_LENGTH];
