@@ -4,7 +4,7 @@
 #include "common.h"
 #include "timer.h"
 
-__global__ void nw_0(int* matrix, unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores_d, unsigned int numSequences) {
+__global__ void nw_0(int* matrix, unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores_d) {
 
 	unsigned long long int base = SEQUENCE_LENGTH*SEQUENCE_LENGTH*blockIdx.x;
 	unsigned int segment = SEQUENCE_LENGTH*blockIdx.x;
@@ -28,10 +28,10 @@ __global__ void nw_0(int* matrix, unsigned char* sequence1_d, unsigned char* seq
 				left = (row+1)*INSERTION;
 				topleft = row*INSERTION;
 			}	
-			else if(row==0) {
+			else if(row == 0) {
 				top = (col+1)*DELETION;
 				left = matrix[base + SEQUENCE_LENGTH*row + (col-1)];
-				topleft = col*INSERTION;
+				topleft = col*DELETION;
 			}
 			else {
 				top = matrix[base + SEQUENCE_LENGTH*(row-1) + col];
@@ -104,11 +104,10 @@ __global__ void nw_0(int* matrix, unsigned char* sequence1_d, unsigned char* seq
 		__syncthreads();
 	}
 
-	if(threadIdx.x == 0)
+	if(tidx == 0)
 	{
 		scores_d[blockIdx.x] = matrix[base + SEQUENCE_LENGTH*(SEQUENCE_LENGTH-1) + (SEQUENCE_LENGTH-1)];
 	}
-
 }
 
 
@@ -117,10 +116,11 @@ void nw_gpu0(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores
     assert(SEQUENCE_LENGTH <= 1024); // You can assume the sequence length is not more than 1024
 
 	int* matrix;
-    cudaMalloc((void**)&matrix,sizeof(int)*SEQUENCE_LENGTH*SEQUENCE_LENGTH*numSequences);
+    cudaMalloc((void**)&matrix, sizeof(int)*SEQUENCE_LENGTH*SEQUENCE_LENGTH*numSequences);
 	
 	int numThreadsPerBlock = SEQUENCE_LENGTH;
     int numBlocks = numSequences;
-	nw_0 <<<numBlocks, numThreadsPerBlock>>> (matrix, sequence1_d,sequence2_d,scores_d,numSequences);
+	nw_0 <<<numBlocks, numThreadsPerBlock>>> (matrix, sequence1_d, sequence2_d, scores_d);
+
     cudaFree(matrix);
 }
