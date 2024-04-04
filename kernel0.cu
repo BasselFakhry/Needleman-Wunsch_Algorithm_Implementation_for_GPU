@@ -11,33 +11,18 @@ __global__ void nw_0(int* matrix, unsigned char* sequence1_d, unsigned char* seq
     unsigned int tidx = threadIdx.x;
 	int row, col, top, left, topleft, insertion, deletion, match, max;
 
-	for(unsigned int i=0; i<SEQUENCE_LENGTH; ++i)
+	for(unsigned int i = 0; i < SEQUENCE_LENGTH; ++i)
 	{ 
 		if(tidx <= i)
-		{
+		{	
+
 			row = i-tidx;
 			col = tidx;
 			
-			if(col == 0 && row == 0) {
-				top = DELETION;
-				left = INSERTION;
-				topleft = 0;
-			}		
-			else if(col == 0) {
-				top = matrix[base + SEQUENCE_LENGTH*(row-1) + col];
-				left = (row+1)*INSERTION;
-				topleft = row*INSERTION;
-			}	
-			else if(row == 0) {
-				top = (col+1)*DELETION;
-				left = matrix[base + SEQUENCE_LENGTH*row + (col-1)];
-				topleft = col*DELETION;
-			}
-			else {
-				top = matrix[base + SEQUENCE_LENGTH*(row-1) + col];
-				left = matrix[base + SEQUENCE_LENGTH*row + (col-1)];
-				topleft = matrix[base + SEQUENCE_LENGTH*(row-1) + (col-1)];
-			}
+			top = (col == 0 && row==0)?DELETION:(col==0)?matrix[base + SEQUENCE_LENGTH*(row-1) + col]:(row==0)?(col+1)*DELETION:matrix[base + SEQUENCE_LENGTH*(row-1) + col];
+			left = (col == 0 && row==0)?INSERTION:(col==0)?(row+1)*INSERTION:(row==0)?matrix[base + SEQUENCE_LENGTH*row + (col-1)]:matrix[base + SEQUENCE_LENGTH*row + (col-1)];
+			topleft = (col == 0 && row==0)?0:(col==0)?row*INSERTION:(row==0)?col*DELETION:matrix[base + SEQUENCE_LENGTH*(row-1) + (col-1)];
+			
 			
 			insertion = top + INSERTION;
 			deletion = left + DELETION;

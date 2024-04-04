@@ -6,7 +6,7 @@
 
 __global__ void nw_1(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores_d) {
 
-	unsigned int segment = SEQUENCE_LENGTH*blockIdx.x;
+	unsigned int segment = SEQUENCE_LENGTH *blockIdx.x;
     unsigned int tidx = threadIdx.x;
 	int row, col, top, left, topleft, insertion, deletion, match, max;
 
@@ -32,26 +32,13 @@ __global__ void nw_1(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 			row = i-tidx;
 			col = tidx;
 			
-			if(col == 0 && row == 0) {
-				top = DELETION;
-				left = INSERTION;
-				topleft = 0;
-			}		
-			else if(col == 0) {
-				top = buffer2[tidx];
-				left = (row+1)*INSERTION;
-				topleft = row*INSERTION;
-			}
-			else if(row == 0) {
-				top = (col+1)*DELETION;
-				left = buffer2[tidx-1];
-				topleft = col*DELETION;
-			}
-			else {
-				top = buffer2[tidx];
-				left = buffer2[tidx-1];
-				topleft = buffer1[tidx-1];
-			}
+			top = (col == 0 && row==0)?DELETION:(col==0)?buffer2[tidx]:(row==0)?(col+1)*DELETION:buffer2[tidx];
+			left = (col == 0 && row==0)?INSERTION:(col==0)?(row+1)*INSERTION:(row==0)?buffer2[tidx-1]:buffer2[tidx-1];
+			topleft = (col == 0 && row==0)?0:(col==0)?row*INSERTION:(row==0)?col*DELETION:buffer1[tidx-1];
+			
+			
+
+			
 			
 			insertion = top + INSERTION;
 			deletion = left + DELETION;
