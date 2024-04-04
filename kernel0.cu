@@ -14,15 +14,13 @@ __global__ void nw_0(int* matrix, unsigned char* sequence1_d, unsigned char* seq
 	for(unsigned int i = 0; i < SEQUENCE_LENGTH; ++i)
 	{ 
 		if(tidx <= i)
-		{	
-
+		{
 			row = i-tidx;
 			col = tidx;
 			
 			top = (col == 0 && row==0)?DELETION:(col==0)?matrix[base + SEQUENCE_LENGTH*(row-1) + col]:(row==0)?(col+1)*DELETION:matrix[base + SEQUENCE_LENGTH*(row-1) + col];
 			left = (col == 0 && row==0)?INSERTION:(col==0)?(row+1)*INSERTION:(row==0)?matrix[base + SEQUENCE_LENGTH*row + (col-1)]:matrix[base + SEQUENCE_LENGTH*row + (col-1)];
 			topleft = (col == 0 && row==0)?0:(col==0)?row*INSERTION:(row==0)?col*DELETION:matrix[base + SEQUENCE_LENGTH*(row-1) + (col-1)];
-			
 			
 			insertion = top + INSERTION;
 			deletion = left + DELETION;
