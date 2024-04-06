@@ -11,38 +11,23 @@ __global__ void nw_0(int* matrix, unsigned char* sequence1_d, unsigned char* seq
     unsigned int tidx = threadIdx.x;
 	int row, col, top, left, topleft, insertion, deletion, match, max;
 
-	for(unsigned int i = 0; i < SEQUENCE_LENGTH; ++i)
+	for(unsigned int i=0; i<SEQUENCE_LENGTH; ++i)
 	{ 
 		if(tidx <= i)
 		{
 			row = i-tidx;
 			col = tidx;
 			
-			top = (col == 0 && row==0)?DELETION:(col==0)?matrix[base + SEQUENCE_LENGTH*(row-1) + col]:(row==0)?(col+1)*DELETION:matrix[base + SEQUENCE_LENGTH*(row-1) + col];
-			left = (col == 0 && row==0)?INSERTION:(col==0)?(row+1)*INSERTION:(row==0)?matrix[base + SEQUENCE_LENGTH*row + (col-1)]:matrix[base + SEQUENCE_LENGTH*row + (col-1)];
-			topleft = (col == 0 && row==0)?0:(col==0)?row*INSERTION:(row==0)?col*DELETION:matrix[base + SEQUENCE_LENGTH*(row-1) + (col-1)];
+			top = (col == 0 && row==0)?DELETION : (row==0)?(col+1)*DELETION : matrix[base + SEQUENCE_LENGTH*(row-1) + col];
+			left = (col == 0 && row==0)?INSERTION : (col==0)?(row+1)*INSERTION : matrix[base + SEQUENCE_LENGTH*row + (col-1)];
+			topleft = (col == 0 && row==0)?0 : (col==0)?row*INSERTION : (row==0)?col*DELETION : matrix[base + SEQUENCE_LENGTH*(row-1) + (col-1)];
 			
 			insertion = top + INSERTION;
 			deletion = left + DELETION;
-			match = topleft;
-
-			if(sequence1_d[segment + col] == sequence2_d[segment + row]) {
-				match += MATCH;
-			}
-			else {
-				match += MISMATCH;
-			}
-
-			if(insertion > deletion) {
-				max = insertion;
-			}
-			else {
-				max = deletion;
-			}
-
-			if(match > max) {
-				max = match;
-			}
+			match = topleft + ((sequence1_d[segment + col] == sequence2_d[segment + row])?MATCH:MISMATCH);
+			
+			max = (insertion > deletion)?insertion:deletion;
+            max = (match > max)?match:max;
 
 			matrix[base + SEQUENCE_LENGTH*row + col] = max;
 		}				
@@ -62,25 +47,10 @@ __global__ void nw_0(int* matrix, unsigned char* sequence1_d, unsigned char* seq
 
 			insertion = top + INSERTION;
 			deletion = left + DELETION;
-			match = topleft;
-
-			if(sequence1_d[segment + col] == sequence2_d[segment + row]) {
-				match += MATCH;
-			}
-			else {
-				match += MISMATCH;
-			}
-
-			if(insertion > deletion) {
-				max = insertion;
-			}
-			else {
-				max = deletion;
-			}
-
-			if(match > max){
-				max = match;
-			}
+			match = topleft + ((sequence1_d[segment + col] == sequence2_d[segment + row])?MATCH:MISMATCH);
+			
+			max = (insertion > deletion)?insertion:deletion;
+            max = (match > max)?match:max;
 
 			matrix[base + SEQUENCE_LENGTH*row + col] = max;
 		}

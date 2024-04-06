@@ -13,9 +13,9 @@ __global__ void nw_1(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	__shared__ unsigned char sequence1_s[SEQUENCE_LENGTH];
 	__shared__ unsigned char sequence2_s[SEQUENCE_LENGTH];
 
-    __shared__ int buffer1_s[SEQUENCE_LENGTH];
-    __shared__ int buffer2_s[SEQUENCE_LENGTH];
-    __shared__ int buffer3_s[SEQUENCE_LENGTH];
+    __shared__ int buffer1_s[SEQUENCE_LENGTH + 1];
+    __shared__ int buffer2_s[SEQUENCE_LENGTH + 1];
+    __shared__ int buffer3_s[SEQUENCE_LENGTH + 1];
 	int * buffer1 = buffer1_s;
 	int * buffer2 = buffer2_s;
 	int * buffer3 = buffer3_s;
@@ -23,42 +23,39 @@ __global__ void nw_1(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	sequence1_s[tidx] = sequence1_d[segment + tidx];
 	sequence2_s[tidx] = sequence2_d[segment + tidx];
 
+	if (tidx == 0) {
+		buffer1[0] = 0;
+		buffer2[0] = INSERTION;
+		buffer2[1] = DELETION;
+	}
+
 	__syncthreads();
 
-	for(unsigned int i=0; i<SEQUENCE_LENGTH; ++i)
-	{ 
+	for(int i=0; i<SEQUENCE_LENGTH-1; ++i)
+	{
+		if (tidx == 0) {
+			buffer3[0] = (i+2)*INSERTION;
+			buffer3[i+2] = (i+2)*DELETION;
+		}
+		__syncthreads();
+		
 		if(tidx <= i)
 		{
 			row = i-tidx;
 			col = tidx;
 
-			top = (col == 0 && row==0)?DELETION:(col==0)?buffer2[tidx]:(row==0)?(col+1)*DELETION:buffer2[tidx];
-			left = (col == 0 && row==0)?INSERTION:(col==0)?(row+1)*INSERTION:(row==0)?buffer2[tidx-1]:buffer2[tidx-1];
-			topleft = (col == 0 && row==0)?0:(col==0)?row*INSERTION:(row==0)?col*DELETION:buffer1[tidx-1];
+			top = buffer2[tidx+1];
+			left = buffer2[tidx];
+			topleft = buffer1[tidx];
 
 			insertion = top + INSERTION;
 			deletion = left + DELETION;
-			match = topleft;
+			match = topleft + ((sequence1_s[col] == sequence2_s[row])?MATCH:MISMATCH);
+			
+			max = (insertion > deletion)?insertion:deletion;
+            max = (match > max)?match:max;
 
-			if(sequence1_s[col] == sequence2_s[row]) {
-				match += MATCH;
-			}
-			else {
-				match += MISMATCH;
-			}
-
-			if(insertion > deletion) {
-				max = insertion;
-			}
-			else {
-				max = deletion;
-			}
-
-			if(match > max) {
-				max = match;
-			}
-
-			buffer3[tidx] = max;
+			buffer3[tidx+1] = max;
 		}				
 		__syncthreads();
 
@@ -68,10 +65,10 @@ __global__ void nw_1(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 		buffer3 = temp;
 	}
 
-	if(tidx < (SEQUENCE_LENGTH-1))
+	if (tidx < SEQUENCE_LENGTH)
 	{
-		row = SEQUENCE_LENGTH - tidx - 1;
-		col = SEQUENCE_LENGTH + tidx - (SEQUENCE_LENGTH-1);
+		row = SEQUENCE_LENGTH - 1 - tidx;
+		col = tidx;
 
 		top  = buffer2[tidx+1];
 		left = buffer2[tidx];
@@ -79,25 +76,10 @@ __global__ void nw_1(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 
 		insertion = top + INSERTION;
 		deletion = left + DELETION;
-		match = topleft;
-
-		if(sequence1_s[col] == sequence2_s[row]) {
-			match += MATCH;
-		}
-		else {
-			match += MISMATCH;
-		}
-
-		if(insertion > deletion) {
-			max = insertion;
-		}
-		else {
-			max = deletion;
-		}
-
-		if(match > max){
-			max = match;
-		}
+		match = topleft + ((sequence1_s[col] == sequence2_s[row])?MATCH:MISMATCH);
+			
+		max = (insertion > deletion)?insertion:deletion;
+    	max = (match > max)?match:max;
 
 		buffer3[tidx] = max;
 	}
@@ -109,7 +91,7 @@ __global__ void nw_1(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	buffer2 = buffer3;
 	buffer3 = temp;
         
-	for(int i=SEQUENCE_LENGTH-2; i>0; --i)
+	for(int i=SEQUENCE_LENGTH-1; i>0; --i)
 	{
 		if(tidx < i)
 		{
@@ -122,25 +104,10 @@ __global__ void nw_1(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 
 			insertion = top + INSERTION;
 			deletion = left + DELETION;
-			match = topleft;
-
-			if(sequence1_s[col] == sequence2_s[row]) {
-				match += MATCH;
-			}
-			else {
-				match += MISMATCH;
-			}
-
-			if(insertion > deletion) {
-				max = insertion;
-			}
-			else {
-				max = deletion;
-			}
-
-			if(match > max){
-				max = match;
-			}
+			match = topleft + ((sequence1_s[col] == sequence2_s[row])?MATCH:MISMATCH);
+			
+			max = (insertion > deletion)?insertion:deletion;
+            max = (match > max)?match:max;
 
 			buffer3[tidx] = max;
 		}
