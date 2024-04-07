@@ -6,7 +6,7 @@
 
 __global__ void nw_1(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores_d) {
 
-	unsigned int segment = SEQUENCE_LENGTH *blockIdx.x;
+	unsigned int segment = SEQUENCE_LENGTH*blockIdx.x;
     unsigned int tidx = threadIdx.x;
 	int row, col, top, left, topleft, insertion, deletion, match, max;
 
@@ -19,14 +19,14 @@ __global__ void nw_1(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	int * buffer1 = buffer1_s;
 	int * buffer2 = buffer2_s;
 	int * buffer3 = buffer3_s;
-
+	
 	sequence1_s[tidx] = sequence1_d[segment + tidx];
 	sequence2_s[tidx] = sequence2_d[segment + tidx];
 
 	if (tidx == 0) {
-		buffer1[0] = 0;
-		buffer2[0] = INSERTION;
-		buffer2[1] = DELETION;
+		buffer1[tidx] = 0;
+		buffer2[tidx] = INSERTION;
+		buffer2[tidx+1] = DELETION;
 	}
 
 	__syncthreads();
@@ -34,7 +34,7 @@ __global__ void nw_1(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	for(int i=0; i<SEQUENCE_LENGTH-1; ++i)
 	{
 		if (tidx == 0) {
-			buffer3[0] = (i+2)*INSERTION;
+			buffer3[tidx] = (i+2)*INSERTION;
 			buffer3[i+2] = (i+2)*DELETION;
 		}
 		__syncthreads();
@@ -65,24 +65,21 @@ __global__ void nw_1(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 		buffer3 = temp;
 	}
 
-	if (tidx < SEQUENCE_LENGTH)
-	{
-		row = SEQUENCE_LENGTH - 1 - tidx;
-		col = tidx;
+	row = SEQUENCE_LENGTH - 1 - tidx;
+	col = tidx;
 
-		top  = buffer2[tidx+1];
-		left = buffer2[tidx];
-		topleft = buffer1[tidx];
+	top  = buffer2[tidx+1];
+	left = buffer2[tidx];
+	topleft = buffer1[tidx];
 
-		insertion = top + INSERTION;
-		deletion = left + DELETION;
-		match = topleft + ((sequence1_s[col] == sequence2_s[row])?MATCH:MISMATCH);
-			
-		max = (insertion > deletion)?insertion:deletion;
-    	max = (match > max)?match:max;
+	insertion = top + INSERTION;
+	deletion = left + DELETION;
+	match = topleft + ((sequence1_s[col] == sequence2_s[row])?MATCH:MISMATCH);
+		
+	max = (insertion > deletion)?insertion:deletion;
+	max = (match > max)?match:max;
 
-		buffer3[tidx] = max;
-	}
+	buffer3[tidx] = max;
 
 	__syncthreads();
 
@@ -130,7 +127,7 @@ void nw_gpu1(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores
     
     assert(SEQUENCE_LENGTH <= 1024); // You can assume the sequence length is not more than 1024
 
-	int numThreadsPerBlock = SEQUENCE_LENGTH;
-    int numBlocks = numSequences;
+	unsigned int numThreadsPerBlock = SEQUENCE_LENGTH;
+    unsigned int numBlocks = numSequences;
 	nw_1 <<<numBlocks, numThreadsPerBlock>>> (sequence1_d, sequence2_d, scores_d);
 }

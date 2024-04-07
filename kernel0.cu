@@ -71,8 +71,8 @@ void nw_gpu0(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores
 	int* matrix;
     cudaMalloc((void**)&matrix, sizeof(int)*SEQUENCE_LENGTH*SEQUENCE_LENGTH*numSequences);
 	
-	int numThreadsPerBlock = SEQUENCE_LENGTH;
-    int numBlocks = numSequences;
+	unsigned int numThreadsPerBlock = SEQUENCE_LENGTH;
+    unsigned int numBlocks = numSequences;
 	nw_0 <<<numBlocks, numThreadsPerBlock>>> (matrix, sequence1_d, sequence2_d, scores_d);
 
     cudaFree(matrix);

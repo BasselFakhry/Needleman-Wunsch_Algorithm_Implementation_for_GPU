@@ -3,7 +3,8 @@
 #define _COMMON_H_
 
 #define SEQUENCE_LENGTH 1024
-
+#define COARSE_FACTOR 8
+#define WARP_SIZE 32
 #define MATCH       1
 #define MISMATCH    (-1)
 #define INSERTION   (-1)
@@ -15,4 +16,3 @@ void nw_gpu2(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores
 void nw_gpu3(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores_d, unsigned int numSequences);
 
 #endif
-

@@ -3,9 +3,10 @@
 
 #include "common.h"
 #include "timer.h"
-#define COARSENING 8
-__global__ void nw_2(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores_d){
-    unsigned int segment = SEQUENCE_LENGTH *blockIdx.x;
+
+__global__ void nw_2(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores_d) {
+
+    unsigned int segment = SEQUENCE_LENGTH*blockIdx.x;
     unsigned int tidx = threadIdx.x;
 	int row, col, top, left, topleft, insertion, deletion, match, max;
 
@@ -19,31 +20,34 @@ __global__ void nw_2(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	int * buffer2 = buffer2_s;
 	int * buffer3 = buffer3_s;
 
-    for(unsigned int i=0;i<COARSENING;++i){
-        unsigned int index  = tidx+(i*blockDim.x);
-        if(index < SEQUENCE_LENGTH){
+    for(unsigned int j=0; j<COARSE_FACTOR; ++j)
+    {
+        unsigned int index = tidx + j*blockDim.x;
+        if(index < SEQUENCE_LENGTH) {
             sequence1_s[index] = sequence1_d[segment + index];
             sequence2_s[index] = sequence2_d[segment + index];
         }
     }
 
 	if (tidx == 0) {
-		buffer1[0] = 0;
-		buffer2[0] = INSERTION;
-		buffer2[1] = DELETION;
+		buffer1[tidx] = 0;
+		buffer2[tidx] = INSERTION;
+		buffer2[tidx+1] = DELETION;
 	}
 
 	__syncthreads();
 
-	for( int i=0; i<(SEQUENCE_LENGTH-1); ++i)
-	{   
+	for(int i=0; i<SEQUENCE_LENGTH-1; ++i)
+	{
         if (tidx == 0) {
-			buffer3[0] = (i+2)*INSERTION;
+			buffer3[tidx] = (i+2)*INSERTION;
 			buffer3[i+2] = (i+2)*DELETION;
 		}
 		__syncthreads();
-        for(unsigned int j = 0;j<=i/blockDim.x;++j){
-            unsigned int index = tidx+j*blockDim.x;
+
+        for(unsigned int j=0; j<=i/blockDim.x; ++j)
+        {
+            unsigned int index = tidx + j*blockDim.x;
             if(index <= i)
             {
                 row = i-index;
@@ -61,8 +65,7 @@ __global__ void nw_2(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                 max = (match > max)?match:max;
 
                 buffer3[index+1] = max;
-            }				
-
+            }
         }
 		__syncthreads();
 		int * temp = buffer1;
@@ -71,8 +74,10 @@ __global__ void nw_2(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 		buffer3 = temp;
 	}
 
-	for(unsigned int j=0;j<COARSENING;++j)  {
-        unsigned int index = tidx+(blockDim.x*j);
+	for(unsigned int j=0; j<COARSE_FACTOR; ++j)
+    {
+        unsigned int index = tidx + j*blockDim.x;
+
 		row = SEQUENCE_LENGTH - 1 - index;
 		col = index;
 
@@ -98,8 +103,9 @@ __global__ void nw_2(unsigned char* sequence1_d, unsigned char* sequence2_d, int
         
 	for(int i=SEQUENCE_LENGTH-1; i>0; --i)
 	{   
-		for(unsigned int j = 0;j<=i/blockDim.x;++j){
-            unsigned int index  = tidx+(j*blockDim.x);
+		for(unsigned int j=0; j<=i/blockDim.x; ++j)
+        {
+            unsigned int index = tidx + j*blockDim.x;
             if(index < i)
             {
                 row = SEQUENCE_LENGTH - index - 1;
@@ -137,9 +143,7 @@ void nw_gpu2(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores
 
     assert(SEQUENCE_LENGTH <= 1024); // You can assume the sequence length is not more than 1024
 
-    unsigned int nb_threads_block = (SEQUENCE_LENGTH+COARSENING-1)/COARSENING;
-    unsigned int nb_blocks = numSequences;
-    nw_2<<<nb_blocks,nb_threads_block>>>(sequence1_d,sequence2_d,scores_d);
-
+    unsigned int numThreadsPerBlock = (SEQUENCE_LENGTH+COARSE_FACTOR-1)/COARSE_FACTOR;
+    unsigned int numBlocks = numSequences;
+    nw_2 <<<numBlocks, numThreadsPerBlock>>> (sequence1_d,sequence2_d,scores_d);
 }
-
