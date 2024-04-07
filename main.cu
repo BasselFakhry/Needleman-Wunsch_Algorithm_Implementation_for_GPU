@@ -34,8 +34,8 @@ void verify(int* scores_cpu, int* scores_gpu, unsigned int numSequences) {
         if(scores_cpu[s] != scores_gpu[s]) {
             printf("\033[1;31mMismatch at sequence s = %u (CPU result = %d, GPU result = %d)\033[0m\n", s, scores_cpu[s], scores_gpu[s]);
             return;
-        } else { printf("score = %d\n", scores_cpu[s]); // XXX
-        }
+        }// else { printf("score = %d\n", scores_cpu[s]); // XXX
+        //}
     }
     printf("Verification succeeded\n");
 }
