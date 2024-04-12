@@ -42,6 +42,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             row = i-tidx;
             col = tidx;
 
+            //topleft = (tidx==i) ? (i*DELETION) : left;
             top = buffer2[tidx+1];
             
             unsigned int mask = (1u << (i+1)) - 1;
@@ -83,7 +84,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                 row = i-index;
                 col = index;
 
-                //topleft = (index==i) ? (i*DELETION) : left;  (in coming optimization)
+                //topleft = (index==i) ? (i*DELETION) : left; (Optimization: topleft depends on preceeding left, no more need for buffer1)
                 top = buffer2[index+1];
                 left = buffer2[index];
                 topleft = buffer1[index];
@@ -119,6 +120,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 		row = SEQUENCE_LENGTH - 1 - index;
 		col = index;
 
+        //topleft = (index == SEQUENCE_LENGTH - 1) ? (SEQUENCE_LENGTH - 1)*DELETION : left;
 		top  = buffer2[index+1];
 		left = buffer2[index];
 		topleft = buffer1[index];
@@ -147,6 +149,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             row = SEQUENCE_LENGTH - index;
             col = index;
 
+            //topleft = left;
             top  = buffer2[index];
             left = buffer2[index-1];
             topleft = buffer1[index];
@@ -177,7 +180,8 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             {
                 row = 2*SEQUENCE_LENGTH - index - (i+1);
                 col = index;
-
+                
+                //topleft = left;
                 top  = buffer2[index];
                 left = buffer2[index-1];
                 topleft = buffer1[index-1];
@@ -207,12 +211,13 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
         {
             row = 2*SEQUENCE_LENGTH - index - (i+1);
             col = index;
-
+            
+            //topleft = left;
             top  = buffer2[index];
 
-            /*unsigned int mask = (1u << i) - 1;
+            /*unsigned int mask = (1u << (i-1)) - 1;
             left = __shfl_up_sync(mask, top, 1);
-            if (tidx == 0)
+            if (index == SEQUENCE_LENGTH-i)
             {
                 left = buffer2[index-1];
             }*/
