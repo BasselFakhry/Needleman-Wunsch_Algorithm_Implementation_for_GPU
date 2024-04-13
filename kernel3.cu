@@ -175,8 +175,8 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	buffer3 = temp;
         
 	for(int i=SEQUENCE_LENGTH-1; i>WARP_SIZE; --i)
-	{   
-		for(int j=COARSE_FACTOR-1; j>=(0); --j) //(j>=0) to be changed
+	{
+		for(int j=COARSE_FACTOR-1; j>=(COARSE_FACTOR - 1 - (i*COARSE_FACTOR/SEQUENCE_LENGTH)); --j)
         {
             unsigned int index = tidx + j*blockDim.x;
             if((index > SEQUENCE_LENGTH-1-i) && (index <= SEQUENCE_LENGTH-1))
