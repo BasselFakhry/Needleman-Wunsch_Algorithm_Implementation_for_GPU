@@ -175,10 +175,10 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
         
 	for(int i=SEQUENCE_LENGTH-1; i>=WARP_SIZE; --i)
 	{
-		for(int j=COARSE_FACTOR-1; j>=(COARSE_FACTOR - 1 - (i*COARSE_FACTOR/SEQUENCE_LENGTH)); --j)
+		for(int j=COARSE_FACTOR-1; j>=0; --j) //j>=(COARSE_FACTOR-1-(i*COARSE_FACTOR/SEQUENCE_LENGTH))
         {
             unsigned int index = tidx + j*blockDim.x;
-            if((index > SEQUENCE_LENGTH-1-i) && (index <= SEQUENCE_LENGTH-1))
+            if(index > SEQUENCE_LENGTH-1-i)  //&&(index <= SEQUENCE_LENGTH-1)
             {
                 row = 2*SEQUENCE_LENGTH - index - (i+1);
                 col = index;
@@ -230,13 +230,13 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
     for(int i=WARP_SIZE-1; i>0; --i)
 	{
         unsigned int index = tidx + (COARSE_FACTOR-1)*blockDim.x;
-        if((index >= SEQUENCE_LENGTH-1-i) && (index <= SEQUENCE_LENGTH-1))
+        if(index >= SEQUENCE_LENGTH-1-i)
         {
             row = 2*SEQUENCE_LENGTH - index - (i+1);
             col = index;
             
             topleft = left3;
-            top  = buffer2[index];
+            top  = max;
 
             left3 = __shfl_up_sync( __activemask(), top, 1);
 
@@ -247,18 +247,12 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             
             max = (insertion > deletion)?insertion:deletion;
             max = (match > max)?match:max;
-
-            buffer3[index] = max;
         }
-
-		int * temp = buffer2;
-		buffer2 = buffer3;
-		buffer3 = temp;
 	}
 
 	if (tidx == blockDim.x -1)
 	{
-		scores_d[blockIdx.x] = buffer2[SEQUENCE_LENGTH-1];
+		scores_d[blockIdx.x] = max;
 	}
 }
 
