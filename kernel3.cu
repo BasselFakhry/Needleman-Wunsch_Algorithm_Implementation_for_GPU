@@ -41,8 +41,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             topleft = (tidx==i) ? (i*DELETION) : left0;
             top = buffer2[tidx+1];
             
-            unsigned int mask = (1u << (i+1)) - 1;
-            left0 = __shfl_up_sync(mask, top, 1);
+            left0 = __shfl_up_sync( __activemask(), top, 1);
 
             if (tidx == 0) {
                 buffer3[tidx] = (i+2)*INSERTION;
@@ -174,7 +173,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	buffer2 = buffer3;
 	buffer3 = temp;
         
-	for(int i=SEQUENCE_LENGTH-1; i>WARP_SIZE; --i)
+	for(int i=SEQUENCE_LENGTH-1; i>=WARP_SIZE; --i)
 	{
 		for(int j=COARSE_FACTOR-1; j>=(COARSE_FACTOR - 1 - (i*COARSE_FACTOR/SEQUENCE_LENGTH)); --j)
         {
@@ -228,10 +227,10 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 		buffer3 = temp;
 	}
 
-    for(int i=WARP_SIZE; i>0; --i)
+    for(int i=WARP_SIZE-1; i>0; --i)
 	{
         unsigned int index = tidx + (COARSE_FACTOR-1)*blockDim.x;
-        if((index > SEQUENCE_LENGTH-1-i) && (index <= SEQUENCE_LENGTH-1))
+        if((index >= SEQUENCE_LENGTH-1-i) && (index <= SEQUENCE_LENGTH-1))
         {
             row = 2*SEQUENCE_LENGTH - index - (i+1);
             col = index;
@@ -239,13 +238,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             topleft = left3;
             top  = buffer2[index];
 
-            /*unsigned int mask = ((1u << 32) - 1) >> i;
-            left3 = __shfl_up_sync(mask, top, 1);
-            if (index == SEQUENCE_LENGTH-i)
-            {
-                left3 = buffer2[index-1];
-            }*/
-            left3 = buffer2[index-1];
+            left3 = __shfl_up_sync( __activemask(), top, 1);
 
             insertion = top + INSERTION;
             deletion = left3 + DELETION;
