@@ -8,10 +8,10 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 
     unsigned int segment = SEQUENCE_LENGTH*blockIdx.x;
     unsigned int tidx = threadIdx.x;
-	int row, col, top, topleft, insertion, deletion, match, max;
+	int row, top, topleft, insertion, deletion, match, max;
     int left0, left1, left2, left3;
+    unsigned char seq11, seq12, seq13, seq14, seq1temp;
 
-	__shared__ unsigned char sequence1_s[SEQUENCE_LENGTH];
 	__shared__ unsigned char sequence2_s[SEQUENCE_LENGTH];
 
     __shared__ int buffer2_s[SEQUENCE_LENGTH + 1];
@@ -22,8 +22,24 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
     for(unsigned int j=0; j<COARSE_FACTOR; ++j)
     {
         unsigned int index = tidx + j*blockDim.x;
-        sequence1_s[index] = sequence1_d[segment + index];
+
         sequence2_s[index] = sequence2_d[segment + index];
+
+        if (j==0) {
+            seq11 = sequence1_d[segment + index];
+                  
+        } else if (j==1) {
+            seq12 = sequence1_d[segment + index];
+            
+            
+        } else if (j==2) {
+            seq13 = sequence1_d[segment + index];
+    
+
+        } else if (j==3) {
+            seq14 = sequence1_d[segment + index];
+        }
+
     }
 
 	if (tidx == 0) {
@@ -36,7 +52,6 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
         if(tidx <= i)
         {
             row = i-tidx;
-            col = tidx;
 
             topleft = (tidx==i) ? (i*DELETION) : left0;
             top = buffer2[tidx+1];
@@ -51,7 +66,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 
             insertion = top + INSERTION;
             deletion = left0 + DELETION;
-            match = topleft + ((sequence1_s[col] == sequence2_s[row])?MATCH:MISMATCH);
+            match = topleft + ((seq11 == sequence2_s[row])?MATCH:MISMATCH);
             
             max = (insertion > deletion)?insertion:deletion;
             max = (match > max)?match:max;
@@ -78,7 +93,6 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                 }
 
                 row = i-index;
-                col = index;
 
                 if (j==0) {
                     topleft = (index==i) ? (i*DELETION) : left0;
@@ -86,6 +100,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                     left0 = buffer2[index];
                     insertion = top + INSERTION;
                     deletion = left0 + DELETION;
+                    seq1temp = seq11;
 
                 } else if (j==1) {
                     topleft = (index==i) ? (i*DELETION) : left1;
@@ -93,6 +108,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                     left1 = buffer2[index];
                     insertion = top + INSERTION;
                     deletion = left1 + DELETION;
+                    seq1temp = seq12;
                     
                 } else if (j==2) {
                     topleft = (index==i) ? (i*DELETION) : left2;
@@ -100,6 +116,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                     left2 = buffer2[index];
                     insertion = top + INSERTION;
                     deletion = left2 + DELETION;
+                    seq1temp = seq13;
 
                 } else if (j==3) {
                     topleft = (index==i) ? (i*DELETION) : left3;
@@ -107,9 +124,10 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                     left3 = buffer2[index];
                     insertion = top + INSERTION;
                     deletion = left3 + DELETION;
+                    seq1temp = seq14;
                 }
 
-                match = topleft + ((sequence1_s[col] == sequence2_s[row])?MATCH:MISMATCH);
+                match = topleft + ((seq1temp == sequence2_s[row])?MATCH:MISMATCH);
                 
                 max = (insertion > deletion)?insertion:deletion;
                 max = (match > max)?match:max;
@@ -129,7 +147,6 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
         unsigned int index = tidx + j*blockDim.x;
 
 		row = SEQUENCE_LENGTH - 1 - index;
-		col = index;
 
         if (j==0) {
             topleft = (index == SEQUENCE_LENGTH - 1) ? (SEQUENCE_LENGTH - 1)*DELETION : left0;
@@ -137,6 +154,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             left0 = buffer2[index];
             insertion = top + INSERTION;
             deletion = left0 + DELETION;
+            seq1temp = seq11;
 
         } else if (j==1) {
             topleft = (index == SEQUENCE_LENGTH - 1) ? (SEQUENCE_LENGTH - 1)*DELETION : left1;
@@ -144,6 +162,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             left1 = buffer2[index];
             insertion = top + INSERTION;
             deletion = left1 + DELETION;
+            seq1temp = seq12;
             
         } else if (j==2) {
             topleft = (index == SEQUENCE_LENGTH - 1) ? (SEQUENCE_LENGTH - 1)*DELETION : left2;
@@ -151,6 +170,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             left2 = buffer2[index];
             insertion = top + INSERTION;
             deletion = left2 + DELETION;
+            seq1temp = seq13;
 
         } else if (j==3) {
             topleft = (index == SEQUENCE_LENGTH - 1) ? (SEQUENCE_LENGTH - 1)*DELETION : left3;
@@ -158,9 +178,10 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             left3 = buffer2[index];
             insertion = top + INSERTION;
             deletion = left3 + DELETION;
+            seq1temp = seq14;
         }
 
-		match = topleft + ((sequence1_s[col] == sequence2_s[row])?MATCH:MISMATCH);
+		match = topleft + ((seq1temp == sequence2_s[row])?MATCH:MISMATCH);
 
 		max = (insertion > deletion)?insertion:deletion;
     	max = (match > max)?match:max;
@@ -181,7 +202,6 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             if(index > SEQUENCE_LENGTH-1-i)  //&&(index <= SEQUENCE_LENGTH-1)
             {
                 row = 2*SEQUENCE_LENGTH - index - (i+1);
-                col = index;
 
                 if (j==0) {
                     topleft = left0;
@@ -189,6 +209,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                     left0 = buffer2[index-1];
                     insertion = top + INSERTION;
                     deletion = left0 + DELETION;
+                    seq1temp = seq11;
 
                 } else if (j==1) {
                     topleft = left1;
@@ -196,6 +217,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                     left1 = buffer2[index-1];
                     insertion = top + INSERTION;
                     deletion = left1 + DELETION;
+                    seq1temp = seq12;
                     
                 } else if (j==2) {
                     topleft = left2;
@@ -203,6 +225,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                     left2 = buffer2[index-1];
                     insertion = top + INSERTION;
                     deletion = left2 + DELETION;
+                    seq1temp = seq13;
 
                 } else if (j==3) {
                     topleft = left3;
@@ -210,9 +233,10 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                     left3 = buffer2[index-1];
                     insertion = top + INSERTION;
                     deletion = left3 + DELETION;
+                    seq1temp = seq14;
                 }
 
-                match = topleft + ((sequence1_s[col] == sequence2_s[row])?MATCH:MISMATCH);
+                match = topleft + ((seq1temp == sequence2_s[row])?MATCH:MISMATCH);
                 
                 max = (insertion > deletion)?insertion:deletion;
                 max = (match > max)?match:max;
@@ -233,7 +257,6 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
         if(index >= SEQUENCE_LENGTH-1-i)
         {
             row = 2*SEQUENCE_LENGTH - index - (i+1);
-            col = index;
             
             topleft = left3;
             top  = max;
@@ -243,7 +266,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             insertion = top + INSERTION;
             deletion = left3 + DELETION;
  
-            match = topleft + ((sequence1_s[col] == sequence2_s[row])?MATCH:MISMATCH);
+            match = topleft + ((seq14 == sequence2_s[row])?MATCH:MISMATCH);
             
             max = (insertion > deletion)?insertion:deletion;
             max = (match > max)?match:max;
