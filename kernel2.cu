@@ -102,7 +102,7 @@ __global__ void nw_2(unsigned char* sequence1_d, unsigned char* sequence2_d, int
         
 	for(int i=SEQUENCE_LENGTH-1; i>0; --i)
 	{   
-		for(unsigned int j=0; j<=i/blockDim.x; ++j)
+		for(unsigned int j=0; j<COARSE_FACTOR; ++j)
         {
             unsigned int index = tidx + j*blockDim.x;
             if(index < i)
