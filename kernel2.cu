@@ -3,7 +3,6 @@
 
 #include "common.h"
 #include "timer.h"
-
 __global__ void nw_2(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores_d) {
 
     unsigned int segment = SEQUENCE_LENGTH*blockIdx.x;
@@ -45,7 +44,7 @@ __global__ void nw_2(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 		}
 		__syncthreads();
 
-        for(unsigned int j=0; j<=i/blockDim.x; ++j)
+        for(unsigned int j=0; j<COARSE_FACTOR; ++j)
         {
             unsigned int index = tidx + j*blockDim.x;
             if(index <= i)
