@@ -4,13 +4,14 @@
 #include "common.h"
 #include "timer.h"
 
+#define COARSE_FACTOR 4
+
 __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores_d) {
 
-    unsigned int segment = SEQUENCE_LENGTH*blockIdx.x;
-	int row, top, topleft, insertion, deletion, match, max;
+	int top, match, max;
+    int * temp;
     int left[COARSE_FACTOR];
-    unsigned char seq[COARSE_FACTOR];
-    
+    unsigned char seq1[COARSE_FACTOR];
 
 	__shared__ unsigned char sequence2_s[SEQUENCE_LENGTH];
 
@@ -23,8 +24,8 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
     for(unsigned int j=0; j<COARSE_FACTOR; ++j)
     {
         unsigned int index = threadIdx.x + j*blockDim.x;
-        sequence2_s[index] = sequence2_d[segment + index];
-        seq[j] = sequence1_d[segment + index];
+        sequence2_s[index] = sequence2_d[SEQUENCE_LENGTH*blockIdx.x + index];
+        seq1[j] = sequence1_d[SEQUENCE_LENGTH*blockIdx.x + index];
     }
 
 	if (threadIdx.x == 0) {
@@ -36,11 +37,10 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	{
         if(threadIdx.x <= i)
         {
-            row = i-threadIdx.x;
+            match = (threadIdx.x==i)?(i*DELETION):left[0];
+            match += ((seq1[0] == sequence2_s[i-threadIdx.x])?MATCH:MISMATCH);
 
-            topleft = (threadIdx.x==i) ? (i*DELETION) : left[0];
             top = buffer2[threadIdx.x+1];
-            
             left[0] = __shfl_up_sync( __activemask(), top, 1);
 
             if (threadIdx.x == 0) {
@@ -48,18 +48,14 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                 buffer3[i+2] = (i+2)*DELETION;
                 left[0] = (i+1)*INSERTION;
             }
-
-            insertion = top + INSERTION;
-            deletion = left[0] + DELETION;
-            match = topleft + ((seq[0] == sequence2_s[row])?MATCH:MISMATCH);
             
-            max = (insertion > deletion)?insertion:deletion;
-            max = (match > max)?match:max;
+            max = (top+INSERTION>left[0]+DELETION)?(top+INSERTION):(left[0]+DELETION);
+            max = (match>max)?match:max;
 
             buffer3[threadIdx.x+1] = max;
         }
 
-		int * temp = buffer2;
+		temp = buffer2;
 		buffer2 = buffer3;
 		buffer3 = temp;
 	}
@@ -68,7 +64,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	for(int i=WARP_SIZE; i<SEQUENCE_LENGTH-1; ++i)
 	{
         #pragma unroll
-        for(unsigned int j=0; j<COARSE_FACTOR; ++j)
+        for(unsigned int j=0; j<COARSE_FACTOR; ++j) //(j<=i/blockDim.x)
         {
             unsigned int index = threadIdx.x + j*blockDim.x;
             if(index <= i)
@@ -78,58 +74,42 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                     buffer3[i+2] = (i+2)*DELETION;
                 }
 
-                row = i-index;
+                match = (index==i)?(i*DELETION):left[j];
+                match += ((seq1[j] == sequence2_s[i-index])?MATCH:MISMATCH);
 
-                
-                
-                topleft = (index==i) ? (i*DELETION) : left[j];
-                top = buffer2[index+1];
                 left[j] = buffer2[index];
-                insertion = top + INSERTION;
-                deletion = left[j] + DELETION;
-            
 
-                
-
-                match = topleft + ((seq[j] == sequence2_s[row])?MATCH:MISMATCH);
-                
-                max = (insertion > deletion)?insertion:deletion;
-                max = (match > max)?match:max;
+                max = (buffer2[index+1]+INSERTION>left[j]+DELETION)?(buffer2[index+1]+INSERTION):(left[j]+DELETION);
+                max = (match>max)?match:max;
 
                 buffer3[index+1] = max;
             }
         }
 		__syncthreads();
 
-		int * temp = buffer2;
+		temp = buffer2;
 		buffer2 = buffer3;
 		buffer3 = temp;
 	}
+
     #pragma unroll
 	for(unsigned int j=0; j<COARSE_FACTOR; ++j)
     {
         unsigned int index = threadIdx.x + j*blockDim.x;
 
-		row = SEQUENCE_LENGTH - 1 - index;
+        match = (index == SEQUENCE_LENGTH - 1) ? (SEQUENCE_LENGTH - 1)*DELETION : left[j];
+        match+= ((seq1[j] == sequence2_s[SEQUENCE_LENGTH - 1 - index])?MATCH:MISMATCH);
 
-    
-        topleft = (index == SEQUENCE_LENGTH - 1) ? (SEQUENCE_LENGTH - 1)*DELETION : left[j];
-        top  = buffer2[index+1];
         left[j] = buffer2[index];
-        insertion = top + INSERTION;
-        deletion = left[j] + DELETION;
-        
 
-		match = topleft + ((seq[j] == sequence2_s[row])?MATCH:MISMATCH);
-
-		max = (insertion > deletion)?insertion:deletion;
+		max = (buffer2[index+1]+INSERTION>left[j]+DELETION)?(buffer2[index+1]+INSERTION):(left[j]+DELETION);
     	max = (match > max)?match:max;
 
 		buffer3[index] = max;
 	}
 	__syncthreads();
 
-	int * temp = buffer2;
+    temp = buffer2;
 	buffer2 = buffer3;
 	buffer3 = temp;
         
@@ -141,27 +121,19 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             unsigned int index = threadIdx.x + j*blockDim.x;
             if(index > SEQUENCE_LENGTH-1-i)  //&&(index <= SEQUENCE_LENGTH-1)
             {
-                row = 2*SEQUENCE_LENGTH - index - (i+1);
+                match = left[j] + ((seq1[j] == sequence2_s[2*SEQUENCE_LENGTH-index-(i+1)])?MATCH:MISMATCH);
 
-            
-                topleft = left[j];
-                top  = buffer2[index];
                 left[j] = buffer2[index-1];
-                insertion = top + INSERTION;
-                deletion = left[j] + DELETION;
-
                 
-                match = topleft + ((seq[j] == sequence2_s[row])?MATCH:MISMATCH);
-                
-                max = (insertion > deletion)?insertion:deletion;
-                max = (match > max)?match:max;
+                max = (buffer2[index]+INSERTION>left[j]+DELETION)?(buffer2[index]+INSERTION):(left[j]+DELETION);
+                max = (match>max)?match:max;
 
                 buffer3[index] = max;
             }
         }
         __syncthreads();
 
-		int * temp = buffer2;
+		temp = buffer2;
 		buffer2 = buffer3;
 		buffer3 = temp;
 	}
@@ -171,19 +143,12 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
         unsigned int index = threadIdx.x + (COARSE_FACTOR-1)*blockDim.x;
         if(index >= SEQUENCE_LENGTH-1-i)
         {
-            row = 2*SEQUENCE_LENGTH - index - (i+1);
-            
-            topleft = left[COARSE_FACTOR-1];
+            match = left[COARSE_FACTOR-1] + ((seq1[COARSE_FACTOR-1] == sequence2_s[2*SEQUENCE_LENGTH-index-(i+1)])?MATCH:MISMATCH);
+
             top  = max;
-
             left[COARSE_FACTOR-1] = __shfl_up_sync( __activemask(), top, 1);
-
-            insertion = top + INSERTION;
-            deletion = left[COARSE_FACTOR-1] + DELETION;
- 
-            match = topleft + ((seq[COARSE_FACTOR-1] == sequence2_s[row])?MATCH:MISMATCH);
             
-            max = (insertion > deletion)?insertion:deletion;
+            max = ((max+INSERTION)>(left[COARSE_FACTOR-1]+DELETION))?(max+INSERTION):(left[COARSE_FACTOR-1]+DELETION);
             max = (match > max)?match:max;
         }
 	}

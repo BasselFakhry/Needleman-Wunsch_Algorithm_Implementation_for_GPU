@@ -3,6 +3,9 @@
 
 #include "common.h"
 #include "timer.h"
+
+#define COARSE_FACTOR 2
+
 __global__ void nw_2(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores_d) {
 
     unsigned int segment = SEQUENCE_LENGTH*blockIdx.x;

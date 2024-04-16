@@ -3,7 +3,6 @@
 #define _COMMON_H_
 
 #define SEQUENCE_LENGTH 1024
-#define COARSE_FACTOR 2
 #define WARP_SIZE 32
 #define MATCH       1
 #define MISMATCH    (-1)
