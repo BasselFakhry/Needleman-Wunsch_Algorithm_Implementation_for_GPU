@@ -4,7 +4,7 @@
 #include "common.h"
 #include "timer.h"
 
-#define COARSE_FACTOR 4
+
 
 __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores_d) {
 
@@ -32,7 +32,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 		buffer2[threadIdx.x] = INSERTION;
 		buffer2[threadIdx.x+1] = DELETION;
 	}
-    
+    #pragma unroll
     for(int i=0; i<WARP_SIZE; ++i)
 	{
         if(threadIdx.x <= i)
@@ -60,7 +60,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 		buffer3 = temp;
 	}
     __syncthreads();
-
+    #pragma unroll
 	for(int i=WARP_SIZE; i<SEQUENCE_LENGTH-1; ++i)
 	{
         #pragma unroll
@@ -90,6 +90,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 		temp = buffer2;
 		buffer2 = buffer3;
 		buffer3 = temp;
+        
 	}
 
     #pragma unroll
@@ -112,7 +113,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
     temp = buffer2;
 	buffer2 = buffer3;
 	buffer3 = temp;
-        
+    #pragma unroll 
 	for(int i=SEQUENCE_LENGTH-1; i>=WARP_SIZE; --i)
 	{   
         #pragma unroll
@@ -137,7 +138,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 		buffer2 = buffer3;
 		buffer3 = temp;
 	}
-
+    #pragma unroll
     for(int i=WARP_SIZE-1; i>0; --i)
 	{
         unsigned int index = threadIdx.x + (COARSE_FACTOR-1)*blockDim.x;
