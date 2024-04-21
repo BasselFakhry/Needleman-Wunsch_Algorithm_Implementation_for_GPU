@@ -1,6 +1,6 @@
 
 NVCC        = nvcc
-NVCC_FLAGS  = -O3
+NVCC_FLAGS  = -O3 -maxrregcount=32
 OBJ         = main.o kernel0.o kernel1.o kernel2.o kernel3.o
 EXE         = nw
 
