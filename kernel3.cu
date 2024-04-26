@@ -27,13 +27,8 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
         seq1[j] = sequence1_d[SEQUENCE_LENGTH*blockIdx.x + index];
         sequence2_s[index] = sequence2_d[SEQUENCE_LENGTH*blockIdx.x + index];
         left[j] = index*DELETION;
-        buffer2[index+1] = 2*DELETION;
-	    buffer3[index+1] = 2*DELETION;
-    }
-
-    if (threadIdx.x==0) {
-	    buffer2[index+1] = DELETION;
-        buffer3[index] = 2*DELETION;
+        buffer2[index+1] = DELETION;
+	    buffer3[index+1] = DELETION;
     }
 
     #pragma unroll
@@ -46,6 +41,8 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             left[0] = __shfl_up_sync( __activemask(), buffer2[threadIdx.x+1], 1);
 
             if (threadIdx.x == 0) {
+                buffer3[threadIdx.x] = (i+2)*INSERTION;
+                buffer3[i+2] = (i+2)*DELETION;
                 left[0] = (i+1)*INSERTION;
             }
 
