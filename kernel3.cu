@@ -27,10 +27,14 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
         seq1[j] = sequence1_d[SEQUENCE_LENGTH*blockIdx.x + index];
         sequence2_s[index] = sequence2_d[SEQUENCE_LENGTH*blockIdx.x + index];
         left[j] = index*DELETION;
+        buffer2[index+1] = 2*DELETION;
+	    buffer3[index+1] = 2*DELETION;
     }
-    
-    buffer2[threadIdx.x] = INSERTION;
-	buffer2[threadIdx.x+1] = DELETION;
+
+    if (threadIdx.x==0) {
+	    buffer2[index+1] = DELETION;
+        buffer3[index] = 2*DELETION;
+    }
 
     #pragma unroll
     for(int i=0; i<WARP_SIZE; ++i)
@@ -42,8 +46,6 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             left[0] = __shfl_up_sync( __activemask(), buffer2[threadIdx.x+1], 1);
 
             if (threadIdx.x == 0) {
-                buffer3[threadIdx.x] = (i+2)*INSERTION;
-                buffer3[i+2] = (i+2)*DELETION;
                 left[0] = (i+1)*INSERTION;
             }
 
@@ -61,10 +63,6 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
     #pragma unroll
 	for(int i=WARP_SIZE; i<SEQUENCE_LENGTH-1; ++i)
 	{
-        if(threadIdx.x == 0) {
-            buffer3[0] = (i+2)*INSERTION;
-            buffer3[i+2] = (i+2)*DELETION;
-        }
         #pragma unroll
         for(unsigned int j=0; j<COARSE_FACTOR; ++j)
         {
@@ -72,7 +70,6 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
             if(index <= i)
             {
                 match = left[j];
-
                 left[j] = buffer2[index];
                 
                 match += ((seq1[j] == sequence2_s[i-index])?MATCH:MISMATCH);
@@ -91,9 +88,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	for(unsigned int j=0; j<COARSE_FACTOR; ++j)
     {
         index = threadIdx.x + j*blockDim.x;
-
         match = left[j];
-
         left[j] = buffer2[index];
 
 		match += ((seq1[j] == sequence2_s[SEQUENCE_LENGTH-1-index])?MATCH:MISMATCH);
@@ -110,13 +105,12 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	for(int i=SEQUENCE_LENGTH-1; i>0; --i)
 	{
         #pragma unroll
-		for(int j=COARSE_FACTOR-1; j>=0; --j) //j>=(COARSE_FACTOR-1-(i*COARSE_FACTOR/SEQUENCE_LENGTH))
+		for(int j=COARSE_FACTOR-1; j>=0; --j)
         {
             index = threadIdx.x + j*blockDim.x;
-            if(index > SEQUENCE_LENGTH-1-i)  //&&(index <= SEQUENCE_LENGTH-1)
+            if(index > SEQUENCE_LENGTH-1-i)
             {
                 match = left[j];
-
                 left[j] = buffer2[index-1];
 
                 match += (seq1[j] == sequence2_s[2*SEQUENCE_LENGTH-index-(i+1)])?MATCH:MISMATCH;
