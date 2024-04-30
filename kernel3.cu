@@ -70,7 +70,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                 match += ((seq1[j] == sequence2_s[i-index])?MATCH:MISMATCH);
                 max = (buffer1[index+1]+INSERTION>left[j]+DELETION)?(buffer1[index+1]+INSERTION):(left[j]+DELETION);
                 buffer2[index+1] = (match>max)?match:max;
-            }
+            } else break;
         }
 		__syncthreads();
 
@@ -112,7 +112,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
                 max = (buffer1[index]+INSERTION>left[j]+DELETION)?(buffer1[index]+INSERTION):(left[j]+DELETION);
                 max = (match>max)?match:max;
                 buffer2[index] = max;
-            }
+            } else break;
         }
         __syncthreads();
 
