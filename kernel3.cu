@@ -33,10 +33,9 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
     #pragma unroll
     for(int i=0; i<WARP_SIZE; ++i)
 	{
-        if(threadIdx.x <= i)
+        if(threadIdx.x<=i)
         {
             match = left[0];
-
             left[0] = __shfl_up_sync( __activemask(), buffer1[threadIdx.x+1], 1);
 
             if (threadIdx.x == 0) {
@@ -123,7 +122,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	buffer2 = temp;
     
     #pragma unroll
-	for(int i=SEQUENCE_LENGTH-1; i>SEQUENCE_LENGTH-64; --i)
+	for(int i=SEQUENCE_LENGTH-1; i>SEQUENCE_LENGTH-65; --i)
 	{
         #pragma unroll
 		for(int j=COARSE_FACTOR-2; j>0; --j)
@@ -149,7 +148,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	}
 
     #pragma unroll
-	for(int i=SEQUENCE_LENGTH-64; i>0; --i)
+	for(int i=SEQUENCE_LENGTH-65; i>0; --i)
 	{
         #pragma unroll
 		for(int j=COARSE_FACTOR-1; j>1; --j)
@@ -174,7 +173,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 		buffer2 = temp;
 	}
 
-	if (threadIdx.x == blockDim.x -1) {
+	if (threadIdx.x == blockDim.x-1) {
 		scores_d[blockIdx.x] = max;
 	}
 }
