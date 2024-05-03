@@ -8,7 +8,7 @@
 
 __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int* scores_d) {
 
-	int index, match, max;
+    int index, match, max;
     int* temp;
     int left[COARSE_FACTOR];
     int seq1[COARSE_FACTOR];
@@ -56,16 +56,40 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
     __syncthreads();
 
     #pragma unroll
-	for(int i=WARP_SIZE; i<SEQUENCE_LENGTH-1; ++i)
+	for(int i=WARP_SIZE; i<SEQUENCE_LENGTH-64; ++i)
 	{
         #pragma unroll
-        for(unsigned int j=0; j<COARSE_FACTOR; ++j)
+        for(unsigned int j=0; j<COARSE_FACTOR-2; ++j)
         {
             index = threadIdx.x + j*blockDim.x;
-            if(index > i)
-            {
+            if(index>i) {
                 break;
-            } else{
+            } else {
+                match = left[j];
+                left[j] = buffer1[index];
+                
+                match += ((seq1[j] == sequence2_s[i-index])?MATCH:MISMATCH);
+                max = (buffer1[index+1]+INSERTION>left[j]+DELETION)?(buffer1[index+1]+INSERTION):(left[j]+DELETION);
+                buffer2[index+1] = (match>max)?match:max;
+            }
+        }
+		__syncthreads();
+
+		temp = buffer1;
+		buffer1 = buffer2;
+		buffer2 = temp;
+	}
+    
+    #pragma unroll
+	for(int i=SEQUENCE_LENGTH-64; i<SEQUENCE_LENGTH-1; ++i)
+	{
+        #pragma unroll
+        for(unsigned int j=1; j<COARSE_FACTOR-1; ++j)
+        {
+            index = threadIdx.x + j*blockDim.x;
+            if(index>i) {
+                break;
+            } else {
                 match = left[j];
                 left[j] = buffer1[index];
                 
@@ -82,7 +106,7 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	}
 
     #pragma unroll
-	for(unsigned int j=0; j<COARSE_FACTOR; ++j)
+	for(unsigned int j=1; j<COARSE_FACTOR-1; ++j)
     {
         index = threadIdx.x + j*blockDim.x;
         match = left[j];
@@ -97,18 +121,43 @@ __global__ void nw_3(unsigned char* sequence1_d, unsigned char* sequence2_d, int
 	temp = buffer1;
 	buffer1 = buffer2;
 	buffer2 = temp;
-
+    
     #pragma unroll
-	for(int i=SEQUENCE_LENGTH-1; i>0; --i)
+	for(int i=SEQUENCE_LENGTH-1; i>SEQUENCE_LENGTH-64; --i)
 	{
         #pragma unroll
-		for(int j=COARSE_FACTOR-1; j>=0; --j)
+		for(int j=COARSE_FACTOR-2; j>0; --j)
         {
             index = threadIdx.x + j*blockDim.x;
-            if(index < SEQUENCE_LENGTH-i)
-            {
+            if(index<SEQUENCE_LENGTH-i) {
                 break;
-            } else{
+            } else {
+                match = left[j];
+                left[j] = buffer1[index-1];
+
+                match += ((seq1[j] == sequence2_s[2*SEQUENCE_LENGTH-index-(i+1)])?MATCH:MISMATCH);
+                max = (buffer1[index]+INSERTION>left[j]+DELETION)?(buffer1[index]+INSERTION):(left[j]+DELETION);
+                max = (match>max)?match:max;
+                buffer2[index] = max;
+            }
+        }
+        __syncthreads();
+
+		temp = buffer1;
+		buffer1 = buffer2;
+		buffer2 = temp;
+	}
+
+    #pragma unroll
+	for(int i=SEQUENCE_LENGTH-64; i>0; --i)
+	{
+        #pragma unroll
+		for(int j=COARSE_FACTOR-1; j>1; --j)
+        {
+            index = threadIdx.x + j*blockDim.x;
+            if(index<SEQUENCE_LENGTH-i) {
+                break;
+            } else {
                 match = left[j];
                 left[j] = buffer1[index-1];
 
