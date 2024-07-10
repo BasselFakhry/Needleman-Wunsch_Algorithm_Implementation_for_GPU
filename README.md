@@ -40,7 +40,7 @@ Incremental optimizations were applied, with each kernel building on the previou
   - Achieved the final execution time of 4.7ms for the default 3000 sequence pairs.
 
 
-Hardware used: AMD EPYC 7551P CPU with 64GB of main memory, NVIDIA Volta V100 GPU with 32GB of device memory.
+**Hardware used:** AMD EPYC 7551P CPU with 64GB of main memory, NVIDIA Volta V100 GPU with 32GB of device memory.
 
 
 ## Instructions
