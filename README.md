@@ -16,8 +16,6 @@ The Needleman-Wunsch algorithm is a dynamic programming technique widely used in
 
 Incremental optimizations were applied, with each kernel building on the previous one.
 
-Hardware used: NVIDIA V100 GPU.
-
 - **Kernel0:**
   - Used an array of matrices, each storing calculations for a pair of sequences.
   - Each block handled one sequence pair, with the number of threads per block equaling SEQUENCE_LENGTH, traversing the matrix anti-diagonally and assigning a thread to each output element in the current diagonal.
@@ -40,6 +38,9 @@ Hardware used: NVIDIA V100 GPU.
   - Applied #pragma unroll to reduce stalls on long-latency operations.
   - Minimized control divergence and unnecessary computations with optimized loops and break conditions.
   - Achieved the final execution time of 4.7ms for the default 3000 sequence pairs.
+
+
+Hardware used: AMD EPYC 7551P CPU with 64GB of main memory, NVIDIA Volta V100 GPU with 32GB of device memory.
 
 
 ## Instructions
